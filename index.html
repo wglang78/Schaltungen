@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stromkreise verstehen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0F3; --surface:#FFFFFF; --ink:#24324A; --muted:#5E6878; --line:#D3D9E1; --grid:#E3E8EE;
+  --hero:#24324A; --hero-grid:rgba(255,255,255,.07); --hero-sub:#B9C3D2;
+  --electron:#3A6EA5; --lamp:#E9B949; --lamp-ink:#4A3708; --lamp-shade:#B98E2C;
+  --series:#5C5A9C; --parallel:#3F8573; --combo:#B8743A; --mode:#24324A;
+  --wire:#24324A; --text:#24324A; --lampoff:#FFFFFF; --shade:#24324A;
+  --r-lg:20px; --r-md:12px; --r-sm:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --paper:#141A24; --surface:#1C2431; --ink:#E4E8EE; --muted:#A3ACBA; --line:#303A4A; --grid:#242D3B;
+    --hero:#2A3954; --hero-sub:#B9C3D2; --electron:#7FA6D6; --wire:#D3D9E1; --text:#E4E8EE; --lampoff:#1C2431; --shade:#000;
+    --series:#9592D0; --parallel:#6FB5A2; --combo:#D69A62; --mode:#E4E8EE; }
+}
+body[data-mode=series]{--mode:var(--series)}
+body[data-mode=parallel]{--mode:var(--parallel)}
+body[data-mode=combo]{--mode:var(--combo)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Lexend",system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:400;line-height:1.55;font-size:16px}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--mode);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 56px}
+.hidden{display:none!important}
+
+/* Kopf */
+.top{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px;padding:clamp(22px,4vw,36px) clamp(22px,4vw,40px);border-radius:26px;background:var(--hero);color:#fff;
+  background-image:linear-gradient(var(--hero-grid) 1px,transparent 1px),linear-gradient(90deg,var(--hero-grid) 1px,transparent 1px);background-size:22px 22px}
+.top h1{margin:0;font-size:clamp(1.9rem,4.4vw,3rem);font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.top p{margin:8px 0 0;color:var(--hero-sub);font-size:1.02rem}
+.top-art{flex:none;width:clamp(120px,22vw,230px);height:auto}
+@media (max-width:560px){ .top-art{display:none} }
+
+/* Schaltungswahl */
+.pick-h{margin:0 0 10px;font-size:1rem;font-weight:600;color:var(--ink)}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px}
+.modes button{position:relative;display:flex;align-items:center;gap:14px;text-align:left;padding:16px 18px;border:2px solid var(--c);border-radius:18px;
+  background:var(--surface);color:var(--ink);cursor:pointer;
+  box-shadow:0 5px 0 color-mix(in srgb,var(--c) 70%,var(--shade));transition:transform .12s,box-shadow .12s,background .2s}
+.modes button:hover{background:color-mix(in srgb,var(--c) 8%,var(--surface));transform:translateY(-2px);box-shadow:0 7px 0 color-mix(in srgb,var(--c) 70%,var(--shade))}
+.modes button:active{transform:translateY(4px);box-shadow:0 1px 0 color-mix(in srgb,var(--c) 70%,var(--shade))}
+.m-icon{flex:none;width:46px;height:46px;border-radius:12px;background:var(--c);display:grid;place-items:center}
+.m-icon svg{width:34px;height:34px}
+.m-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.m-name{font-weight:700;font-size:1.1rem;color:var(--c)}
+.m-desc{font-size:.86rem;color:var(--muted)}
+.modes button[data-mode=series]{--c:var(--series)}
+.modes button[data-mode=parallel]{--c:var(--parallel)}
+.modes button[data-mode=combo]{--c:var(--combo)}
+.modes button.active{background:var(--c);transform:translateY(4px);box-shadow:0 1px 0 color-mix(in srgb,var(--c) 70%,var(--shade))}
+.modes button.active .m-name,.modes button.active .m-desc{color:#fff}
+.modes button.active .m-icon{background:rgba(255,255,255,.22)}
+
+/* Startzustand */
+.intro{background:var(--surface);border:2px dashed color-mix(in srgb,var(--hero) 45%,var(--line));border-radius:var(--r-lg);padding:clamp(24px,5vw,56px);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px}
+.intro h2{margin:0 0 10px;font-size:clamp(1.3rem,2.6vw,1.8rem);font-weight:600;letter-spacing:-.02em;max-width:22ch}
+.intro p{margin:0;color:var(--muted);max-width:60ch}
+
+/* Labor */
+.variants{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.variants button{padding:13px 16px;border-radius:var(--r-md);border:2px solid var(--combo);background:var(--surface);color:var(--ink);cursor:pointer;font-size:.95rem;text-align:left;font-weight:500;transition:background .2s}
+.variants button:hover{background:color-mix(in srgb,var(--combo) 8%,var(--surface))}
+.variants button.active{background:var(--combo);color:#fff;font-weight:600}
+.lab-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,1fr);gap:16px;align-items:stretch}
+.stage{background:var(--surface);border:2px solid color-mix(in srgb,var(--mode) 55%,var(--line));border-radius:var(--r-lg);padding:18px 18px 14px;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:20px 20px;background-position:-1px -1px}
+.stage{display:flex;flex-direction:column;justify-content:center}
+.stage svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.dot,.bulb{flex:none}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--electron)}
+.bulb{width:12px;height:12px;border-radius:50%;background:var(--lamp);box-shadow:0 0 0 4px color-mix(in srgb,var(--lamp) 30%,transparent)}
+.panel{background:var(--surface);border:2px solid color-mix(in srgb,var(--mode) 55%,var(--line));border-radius:var(--r-lg);padding:22px;display:flex;flex-direction:column;gap:18px}
+.panel h2,.laws-h{margin:0;font-size:1.15rem;font-weight:700;letter-spacing:-.01em;color:var(--mode)}
+.controls{display:flex;flex-direction:column;gap:16px}
+.controls label{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:6px 12px;font-size:.92rem;color:var(--muted)}
+.controls label b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.controls input[type=range]{grid-column:1 / -1;width:100%;accent-color:var(--mode);height:22px;margin:0}
+.controls .check{display:flex!important;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-md);background:color-mix(in srgb,var(--mode) 7%,var(--surface));border:1.5px dashed color-mix(in srgb,var(--mode) 60%,var(--line));color:var(--ink)!important;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--mode);margin:0}
+.panel .btn{margin-top:auto}
+.laws-wrap{margin-top:16px;background:var(--surface);border:2px solid color-mix(in srgb,var(--mode) 55%,var(--line));border-radius:var(--r-lg);padding:22px}
+.laws{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+.law{padding:14px 16px;border-radius:var(--r-md);background:color-mix(in srgb,var(--mode) 7%,var(--surface));font-size:.95rem;color:var(--muted);line-height:1.5}
+.law .f{display:block;margin-top:6px;color:var(--ink);font-weight:600;font-size:1.02rem;font-variant-numeric:tabular-nums;border-left:3px solid var(--mode);padding-left:10px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:999px;border:0;font-size:1rem;font-weight:600;cursor:pointer;transition:transform .12s,background .2s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--mode);color:#fff;box-shadow:0 4px 0 color-mix(in srgb,var(--mode) 70%,var(--shade))}
+.btn.primary:active,.btn.hold:active{transform:translateY(3px);box-shadow:none}
+body:not([data-mode]) .btn.primary{background:var(--hero)}
+@media (prefers-color-scheme: dark){ .btn.primary{color:#141A24} .modes button.active .m-name,.modes button.active .m-desc,.variants button.active{color:#141A24} }
+.btn.sec{background:var(--surface);color:var(--ink);border:2px solid var(--ink)}
+.btn.sec:hover{background:var(--paper)}
+.btn.hold{background:var(--lamp);color:var(--lamp-ink);box-shadow:0 4px 0 var(--lamp-shade);user-select:none;-webkit-user-select:none;touch-action:none;-webkit-touch-callout:none}
+.btn.hold.pressed{box-shadow:0 0 0 6px color-mix(in srgb,var(--lamp) 35%,transparent),0 0 28px color-mix(in srgb,var(--lamp) 60%,transparent)}
+
+/* Aufgaben */
+.taskview{max-width:820px;margin:0 auto}
+.task-card{background:var(--surface);border:2px solid color-mix(in srgb,var(--mode) 55%,var(--line));border-radius:var(--r-lg);padding:clamp(22px,4vw,40px)}
+.task-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.92rem}
+.chip{display:inline-flex;padding:5px 12px;border-radius:999px;background:var(--mode);color:#fff;font-weight:600;font-size:.85rem}
+@media (prefers-color-scheme: dark){ .chip{color:#141A24} }
+.task{font-size:clamp(1.12rem,2vw,1.3rem);line-height:1.6;margin:18px 0 26px;max-width:62ch}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.solution{margin-top:22px;padding:18px 20px;border-radius:var(--r-md);background:var(--paper);min-height:96px;transition:background .15s,box-shadow .15s;line-height:1.75}
+.solution.blur .sol-text{visibility:hidden}
+.solution .ph{color:var(--muted);font-size:.95rem}
+.solution:not(.blur){background:color-mix(in srgb,var(--lamp) 16%,var(--surface));box-shadow:inset 0 0 0 2px var(--lamp)}
+.solution:not(.blur) .ph{display:none}
+
+.svgtext{fill:var(--text);font-size:13px;font-family:"Lexend",system-ui,sans-serif}
+.svgmuted{fill:var(--muted);font-size:12px;font-family:"Lexend",system-ui,sans-serif}
+
+@media (max-width:860px){
+  .lab-grid{grid-template-columns:1fr}
+  .modes{grid-template-columns:1fr}
+  .variants{grid-template-columns:1fr}
+  .stage{padding:10px 6px 12px}
+  .legend{padding:0 8px}
+  .panel,.laws-wrap{padding:18px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Stromkreise verstehen</h1>
+      <p>Physik, Klasse 10: Reihen-, Parallel- und kombinierte Schaltungen</p>
+    </div>
+    <svg class="top-art" viewBox="0 -14 230 134" aria-hidden="true">
+      <rect x="20" y="20" width="190" height="80" rx="6" fill="none" stroke="#fff" stroke-width="3"/>
+      <line x1="10" y1="54" x2="30" y2="54" stroke="#fff" stroke-width="3"/><line x1="14" y1="64" x2="26" y2="64" stroke="#fff" stroke-width="6"/>
+      <rect x="10" y="56" width="20" height="6" fill="var(--hero)"/>
+      <circle cx="85" cy="20" r="26" fill="var(--lamp)" opacity=".35"/><circle cx="85" cy="20" r="14" fill="var(--lamp)" stroke="#fff" stroke-width="3"/>
+      <circle cx="150" cy="20" r="26" fill="var(--lamp)" opacity=".35"/><circle cx="150" cy="20" r="14" fill="var(--lamp)" stroke="#fff" stroke-width="3"/>
+      <g fill="#8FA9C9"><circle cx="20" cy="85" r="4"/><circle cx="60" cy="100" r="4"/><circle cx="110" cy="100" r="4"/><circle cx="160" cy="100" r="4"/><circle cx="210" cy="60" r="4"/></g>
+    </svg>
+  </header>
+  <h2 class="pick-h">Schaltung auswählen:</h2>
+
+  <nav class="modes" aria-label="Schaltung wählen">
+    <button data-mode="series"><span class="m-icon"><svg viewBox="0 0 34 34"><path stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" d="M3 17h6M15 17h4M25 17h6"/><circle stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="17" r="3"/><circle stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" cx="22" cy="17" r="3"/></svg></span><span class="m-text"><span class="m-name">Reihenschaltung</span><span class="m-desc">Ein einziger Weg für den Strom</span></span></button>
+    <button data-mode="parallel"><span class="m-icon"><svg viewBox="0 0 34 34"><path stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" d="M3 17h5M8 9v16M26 9v16M26 17h5M8 9h6M20 9h6M8 25h6M20 25h6"/><circle stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" cx="17" cy="9" r="3"/><circle stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" cx="17" cy="25" r="3"/></svg></span><span class="m-text"><span class="m-name">Parallelschaltung</span><span class="m-desc">Mehrere Wege, gleiche Spannung</span></span></button>
+    <button data-mode="combo"><span class="m-icon"><svg viewBox="0 0 34 34"><path stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" d="M2 17h3M11 17h3M14 9v16M14 9h3M23 9h5M14 25h3M23 25h5M28 9v16M28 17h4"/><circle stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" cx="8" cy="17" r="3"/><circle stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" cx="20" cy="9" r="3"/><circle stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" cx="20" cy="25" r="3"/></svg></span><span class="m-text"><span class="m-name">Kombinierte Schaltung</span><span class="m-desc">Reihe und parallel gemischt</span></span></button>
+  </nav>
+
+  <section id="intro" class="intro">
+    <h2>Wähle eine Schaltung, um den Stromkreis einzuschalten.</h2>
+    <p>Die Elektronen setzen sich in Bewegung, die Lampen leuchten. Mit den Reglern änderst du Spannung und Widerstände und siehst sofort, wie sich Stromstärke, Teilspannungen und Helligkeit verändern.</p>
+  </section>
+
+  <section id="anim" class="hidden">
+    <div class="variants hidden" id="variants">
+      <button data-v="combo">Variante A: Parallelschaltung in einer Reihenschaltung</button>
+      <button data-v="combo2">Variante B: Reihenschaltung in einer Parallelschaltung</button>
+    </div>
+    <div class="lab-grid">
+      <div class="stage">
+        <svg id="circuit" viewBox="0 0 660 310" role="img" aria-label="Schaltplan mit animierten Elektronen"></svg>
+        <div class="legend"><span><span class="dot"></span>Elektronen: je schneller, desto größer die Stromstärke</span><span><span class="bulb"></span>Helle Lampe: hohe Leistung</span></div>
+      </div>
+      <aside class="panel">
+        <h2>Einstellen</h2>
+        <div class="controls" id="controls"></div>
+        <button class="btn primary" id="toTasks">Weiter zu den Aufgaben</button>
+      </aside>
+    </div>
+    <div class="laws-wrap">
+      <h2 class="laws-h">Was in dieser Schaltung gilt</h2>
+      <div class="laws" id="laws"></div>
+    </div>
+  </section>
+
+  <section id="tasks" class="taskview hidden">
+    <div class="task-card">
+      <div class="task-meta"><span class="chip" id="taskNo"></span><span id="taskTitle"></span></div>
+      <p class="task" id="taskText"></p>
+      <div class="actions">
+        <button class="btn hold" id="holdBtn">Lösung zeigen (gedrückt halten)</button>
+        <button class="btn primary" id="nextTask">Nächste Aufgabe</button>
+        <button class="btn sec" id="backAnim">Zurück zur Animation</button>
+      </div>
+      <div class="solution blur" id="solution"><div class="ph">Die Lösung leuchtet nur auf, solange du den gelben Button gedrückt hältst.</div><div class="sol-text" id="solText"></div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const fmt = x => { if(!isFinite(x)) return '–'; const r = Math.round(x*1000)/1000; return String(r).replace('.', ','); };
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs={}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+const MODES = {
+  series: {
+    name: 'Reihenschaltung', color: 'var(--series)',
+    loops: [{ d: 'M60 170 L60 90 L540 90 L540 270 L60 270 L60 180', cur: 'I1' }],
+    lamps: [{ n:1, x:220, y:90, lab:'above' }, { n:2, x:380, y:90, lab:'above' }],
+    junctions: [], R: [20, 40], brokenLabel: 'Lampe L2 herausdrehen'
+  },
+  parallel: {
+    name: 'Parallelschaltung', color: 'var(--parallel)',
+    loops: [{ d: 'M60 170 L60 90 L320 90 L320 270 L60 270 L60 180', cur: 'I1' },
+            { d: 'M60 170 L60 90 L480 90 L480 270 L60 270 L60 180', cur: 'I2' }],
+    lamps: [{ n:1, x:320, y:180, lab:'right' }, { n:2, x:480, y:180, lab:'right' }],
+    junctions: [[320,90],[320,270]], R: [30, 60], brokenLabel: 'Lampe L2 herausdrehen'
+  },
+  combo: {
+    name: 'Kombiniert (A): Parallel in Reihe', color: 'var(--combo)',
+    loops: [{ d: 'M60 170 L60 90 L340 90 L340 270 L60 270 L60 180', cur: 'I2' },
+            { d: 'M60 170 L60 90 L500 90 L500 270 L60 270 L60 180', cur: 'I3' }],
+    lamps: [{ n:1, x:190, y:90, lab:'above' }, { n:2, x:340, y:180, lab:'right' }, { n:3, x:500, y:180, lab:'right' }],
+    junctions: [[340,90],[340,270]], R: [10, 20, 20], brokenLabel: 'Lampe L3 herausdrehen'
+  },
+  combo2: {
+    name: 'Kombiniert (B): Reihe in Parallel', color: 'var(--combo)',
+    loops: [{ d: 'M60 170 L60 90 L320 90 L320 270 L60 270 L60 180', cur: 'I1' },
+            { d: 'M60 170 L60 90 L500 90 L500 270 L60 270 L60 180', cur: 'I3' }],
+    lamps: [{ n:1, x:320, y:140, lab:'right' }, { n:2, x:320, y:222, lab:'right' }, { n:3, x:500, y:180, lab:'right' }],
+    junctions: [[320,90],[320,270]], R: [20, 40, 30], brokenLabel: 'Lampe L1 herausdrehen', brokenLamp: 1
+  }
+};
+
+let mode = null, U = 12, R = [], broken = false, loops = [], lampEls = [], last = 0;
+
+function compute(){
+  const v = { I:0, U1:0,U2:0,U3:0, I1:0,I2:0,I3:0, Rg:Infinity };
+  if (mode === 'series'){
+    if (!broken){ v.Rg = R[0]+R[1]; v.I = U/v.Rg; v.I1 = v.I2 = v.I; v.U1 = v.I*R[0]; v.U2 = v.I*R[1]; }
+  } else if (mode === 'parallel'){
+    v.U1 = U; v.I1 = U/R[0];
+    if (!broken){ v.U2 = U; v.I2 = U/R[1]; v.Rg = 1/(1/R[0]+1/R[1]); } else { v.Rg = R[0]; }
+    v.I = v.I1 + v.I2;
+  } else if (mode === 'combo2'){
+    v.U3 = U; v.I3 = U/R[2];
+    if (!broken){ v.Rs = R[0]+R[1]; v.I1 = v.I2 = U/v.Rs; v.U1 = v.I1*R[0]; v.U2 = v.I1*R[1]; v.Rg = 1/(1/v.Rs+1/R[2]); }
+    else { v.Rg = R[2]; }
+    v.I = v.I1 + v.I3;
+  } else {
+    const Rp = broken ? R[1] : 1/(1/R[1]+1/R[2]);
+    v.Rp = Rp; v.Rg = R[0]+Rp; v.I = U/v.Rg; v.I1 = v.I;
+    v.U1 = v.I*R[0]; v.U2 = v.I*Rp; v.I2 = v.U2/R[1];
+    if (!broken){ v.U3 = v.U2; v.I3 = v.U2/R[2]; }
+  }
+  return v;
+}
+
+function buildCircuit(){
+  const svg = document.getElementById('circuit');
+  svg.innerHTML = '';
+  const m = MODES[mode];
+  const wires = el('g', { fill:'none', stroke:'var(--wire)', 'stroke-width':2.5, 'stroke-linejoin':'round' }, svg);
+  m.loops.forEach(l => el('path', { d:l.d }, wires));
+  m.junctions.forEach(([x,y]) => el('circle', { cx:x, cy:y, r:4.5, fill:'var(--wire)' }, svg));
+  // battery
+  el('line', { x1:36, y1:170, x2:84, y2:170, stroke:'var(--wire)', 'stroke-width':3 }, svg);
+  el('line', { x1:48, y1:181, x2:72, y2:181, stroke:'var(--wire)', 'stroke-width':6 }, svg);
+  el('text', { x:90, y:166, class:'svgmuted' }, svg).textContent = '+';
+  el('text', { x:90, y:194, class:'svgmuted' }, svg).textContent = '−';
+  const ut = el('text', { x:74, y:140, class:'svgtext', 'font-weight':600 }, svg); ut.id = 'uLabel';
+  // electrons
+  const dotLayer = el('g', {}, svg);
+  loops = m.loops.map(l => {
+    const p = el('path', { d:l.d, fill:'none', stroke:'none' }, svg);
+    const L = p.getTotalLength(); const n = Math.floor(L/26);
+    const g = el('g', {}, dotLayer);
+    const dots = Array.from({length:n}, () => el('circle', { r:4, fill:'var(--electron)' }, g));
+    return { path:p, L, dots, g, cur:l.cur, off:Math.random()*26 };
+  });
+  // lamps
+  lampEls = m.lamps.map(lp => {
+    const g = el('g', {}, svg);
+    const glow = el('circle', { cx:lp.x, cy:lp.y, r:34, fill:'var(--lamp)', opacity:0 }, g);
+    const body = el('circle', { cx:lp.x, cy:lp.y, r:18, fill:'var(--lampoff)', stroke:'var(--wire)', 'stroke-width':2.5 }, g);
+    const fill = el('circle', { cx:lp.x, cy:lp.y, r:16.5, fill:'var(--lamp)', opacity:0 }, g);
+    const x1 = el('line', { x1:lp.x-12, y1:lp.y-12, x2:lp.x+12, y2:lp.y+12, stroke:'var(--wire)', 'stroke-width':2 }, g);
+    const x2 = el('line', { x1:lp.x+12, y1:lp.y-12, x2:lp.x-12, y2:lp.y+12, stroke:'var(--wire)', 'stroke-width':2 }, g);
+    let tx, ty, anchor;
+    if (lp.lab === 'above'){ tx = lp.x; ty = lp.y-72; anchor = 'middle'; } else { tx = lp.x+28; ty = lp.y-20; anchor = 'start'; }
+    const lines = [0,1,2].map(i => el('text', { x:tx, y:ty+i*16, class: i===0 ? 'svgtext' : 'svgmuted', 'text-anchor':anchor, 'font-weight': i===0 ? 600 : 400 }, svg));
+    return { lp, glow, body, fill, x1, x2, lines };
+  });
+}
+
+function sub(n){ return ['₀','₁','₂','₃'][n]; }
+
+function update(){
+  const v = compute(); const m = MODES[mode];
+  document.getElementById('uLabel').textContent = 'U = ' + fmt(U) + ' V';
+  lampEls.forEach(le => {
+    const n = le.lp.n;
+    const isBroken = broken && n === (m.brokenLamp || m.lamps.length);
+    const Ui = v['U'+n], Ii = v['I'+n], P = Ui*Ii;
+    const dead = !isBroken && broken && mode === 'combo2' && n === 2;
+    const b = isBroken ? 0 : Math.min(1, Math.sqrt(P/6));
+    le.glow.setAttribute('opacity', (b*0.35).toFixed(2));
+    le.fill.setAttribute('opacity', (b*0.95).toFixed(2));
+    le.body.setAttribute('stroke-dasharray', isBroken ? '4 4' : 'none');
+    le.x1.setAttribute('opacity', isBroken ? 0.25 : 1); le.x2.setAttribute('opacity', isBroken ? 0.25 : 1);
+    le.lines[0].textContent = 'L' + n + ' (R' + sub(n) + ' = ' + R[n-1] + ' Ω)';
+    if (isBroken){ le.lines[1].textContent = 'herausgedreht'; le.lines[2].textContent = ''; }
+    else if (dead){ le.lines[1].textContent = 'aus (Zweig unterbrochen)'; le.lines[2].textContent = ''; }
+    else { le.lines[1].textContent = 'U' + sub(n) + ' = ' + fmt(Ui) + ' V'; le.lines[2].textContent = 'I' + sub(n) + ' = ' + fmt(Ii) + ' A'; }
+  });
+  loops.forEach(l => { l.speed = v[l.cur]*180; l.g.setAttribute('opacity', v[l.cur] > 0 ? 1 : 0); });
+  renderLaws(v);
+}
+
+function renderLaws(v){
+  const box = document.getElementById('laws'); let h = '';
+  const law = (t, f) => `<div class="law">${t}<br><span class="f">${f}</span></div>`;
+  if (mode === 'series'){
+    if (broken){ h = law('Stromkreis unterbrochen: In der Reihenschaltung gibt es nur einen Weg für den Strom.', 'I = 0 A → alle Lampen sind aus'); }
+    else {
+      h += law('Die Stromstärke ist überall gleich groß.', `I = I₁ = I₂ = ${fmt(v.I)} A`);
+      h += law('Die Spannung teilt sich auf die Lampen auf.', `U = U₁ + U₂ → ${fmt(U)} V = ${fmt(v.U1)} V + ${fmt(v.U2)} V`);
+      h += law('Die Widerstände addieren sich.', `R = R₁ + R₂ = ${R[0]} Ω + ${R[1]} Ω = ${fmt(v.Rg)} Ω`);
+      h += law('Am größeren Widerstand liegt die größere Teilspannung.', `U₁ : U₂ = R₁ : R₂ = ${R[0]} : ${R[1]}`);
+    }
+  } else if (mode === 'parallel'){
+    if (broken){
+      h += law('Lampe L2 ist herausgedreht – L1 leuchtet unverändert weiter, weil sie ihren eigenen Stromweg hat.', `I = I₁ = ${fmt(v.I1)} A`);
+    } else {
+      h += law('Die Spannung ist an allen Zweigen gleich groß.', `U = U₁ = U₂ = ${fmt(U)} V`);
+      h += law('Die Stromstärke teilt sich auf die Zweige auf.', `I = I₁ + I₂ → ${fmt(v.I)} A = ${fmt(v.I1)} A + ${fmt(v.I2)} A`);
+      h += law('Der Gesamtwiderstand ist kleiner als der kleinste Einzelwiderstand.', `1/R = 1/R₁ + 1/R₂ = 1/${R[0]} Ω + 1/${R[1]} Ω → R = ${fmt(v.Rg)} Ω`);
+      h += law('Durch den kleineren Widerstand fließt der größere Strom.', `I₁ : I₂ = R₂ : R₁ = ${R[1]} : ${R[0]}`);
+    }
+  } else if (mode === 'combo2'){
+    if (broken){
+      h += law('L1 ist herausgedreht: Der linke Zweig ist unterbrochen, deshalb geht auch L2 aus.', `I₁ = I₂ = 0 A`);
+      h += law('L3 leuchtet unverändert weiter, weil sie ihren eigenen Zweig mit voller Spannung hat.', `I = I₃ = ${fmt(v.I3)} A, U₃ = ${fmt(U)} V`);
+    } else {
+      h += law('Schritt 1: L1 und L2 sind in Reihe geschaltet.', `R₁₂ = R₁ + R₂ = ${R[0]} Ω + ${R[1]} Ω = ${fmt(v.Rs)} Ω`);
+      h += law('Schritt 2: Dieser Zweig liegt parallel zu L3.', `1/R = 1/R₁₂ + 1/R₃ = 1/${fmt(v.Rs)} Ω + 1/${R[2]} Ω → R = ${fmt(v.Rg)} Ω`);
+      h += law('Jeder Zweig erhält die volle Spannung. Im linken Zweig teilt sie sich auf L1 und L2 auf.', `U = U₁ + U₂ = U₃ → ${fmt(U)} V = ${fmt(v.U1)} V + ${fmt(v.U2)} V = ${fmt(v.U3)} V`);
+      h += law('Der Strom teilt sich auf die Zweige auf. Durch L1 und L2 fließt derselbe Strom.', `I = I₁ + I₃ → ${fmt(v.I)} A = ${fmt(v.I1)} A + ${fmt(v.I3)} A (I₁ = I₂)`);
+    }
+  } else {
+    if (broken){
+      h += law('L3 ist herausgedreht: Der Gesamtwiderstand steigt, der Gesamtstrom sinkt.', `R = R₁ + R₂ = ${fmt(v.Rg)} Ω → I = ${fmt(v.I)} A`);
+      h += law('L1 wird dunkler, L2 wird heller, weil jetzt mehr Spannung an L2 liegt.', `U₁ = ${fmt(v.U1)} V, U₂ = ${fmt(v.U2)} V`);
+    } else {
+      h += law('Schritt 1: L2 und L3 sind parallel geschaltet.', `1/R₂₃ = 1/${R[1]} Ω + 1/${R[2]} Ω → R₂₃ = ${fmt(v.Rp)} Ω`);
+      h += law('Schritt 2: Dieser Teil liegt in Reihe mit L1.', `R = R₁ + R₂₃ = ${R[0]} Ω + ${fmt(v.Rp)} Ω = ${fmt(v.Rg)} Ω`);
+      h += law('Der gesamte Strom fließt durch L1 und teilt sich dann auf.', `I = I₁ = I₂ + I₃ → ${fmt(v.I)} A = ${fmt(v.I2)} A + ${fmt(v.I3)} A`);
+      h += law('Die Spannung teilt sich zwischen L1 und dem Parallelteil auf.', `U = U₁ + U₂₃ → ${fmt(U)} V = ${fmt(v.U1)} V + ${fmt(v.U2)} V`);
+    }
+  }
+  box.innerHTML = h;
+}
+
+function buildControls(){
+  const c = document.getElementById('controls'); const m = MODES[mode];
+  let h = `<label>Spannung U: <b id="vU">${U} V</b><input type="range" min="1" max="12" step="1" value="${U}" data-k="U"></label>`;
+  R.forEach((r,i) => { h += `<label>Widerstand R${sub(i+1)}: <b id="vR${i}">${r} Ω</b><input type="range" min="10" max="100" step="10" value="${r}" data-k="${i}"></label>`; });
+  h += `<label class="check"><input type="checkbox" id="brk"> ${m.brokenLabel}</label>`;
+  c.innerHTML = h;
+  c.querySelectorAll('input[type=range]').forEach(inp => inp.addEventListener('input', () => {
+    const k = inp.dataset.k, val = +inp.value;
+    if (k === 'U'){ U = val; document.getElementById('vU').textContent = val + ' V'; }
+    else { R[+k] = val; document.getElementById('vR'+k).textContent = val + ' Ω'; }
+    update();
+  }));
+  document.getElementById('brk').addEventListener('change', e => { broken = e.target.checked; update(); });
+}
+
+function tick(t){
+  const dt = last ? Math.min(0.05, (t-last)/1000) : 0; last = t;
+  loops.forEach(l => {
+    if (!l.speed) return;
+    l.off = (l.off - l.speed*dt) % l.L; if (l.off < 0) l.off += l.L;
+    l.dots.forEach((d,i) => { const p = l.path.getPointAtLength((l.off + i*26) % l.L); d.setAttribute('cx', p.x); d.setAttribute('cy', p.y); });
+  });
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* ---------- Aufgaben ---------- */
+const TASKS = {
+  series: [
+    () => { const R1 = pick([10,20,30,40,50]), R2 = pick([10,20,30,40,60]), I = pick([0.1,0.2,0.3,0.5]), Rg = R1+R2, Uq = I*Rg;
+      return { q:`Zwei Lampen mit R₁ = ${R1} Ω und R₂ = ${R2} Ω sind in Reihe an eine Spannung von U = ${fmt(Uq)} V angeschlossen. Berechne den Gesamtwiderstand und die Stromstärke.`,
+        a:`R = R₁ + R₂ = ${R1} Ω + ${R2} Ω = ${Rg} Ω<br>I = U : R = ${fmt(Uq)} V : ${Rg} Ω = ${fmt(I)} A` }; },
+    () => { const Uq = pick([6,9,12,24]), U1 = pick([1.5,2,3,4,4.5,5]);
+      return { q:`Zwei Lampen sind in Reihe an U = ${Uq} V angeschlossen. An Lampe L1 misst man U₁ = ${fmt(U1)} V. Welche Spannung liegt an Lampe L2?`,
+        a:`In der Reihenschaltung gilt U = U₁ + U₂.<br>U₂ = U − U₁ = ${Uq} V − ${fmt(U1)} V = ${fmt(Uq-U1)} V` }; },
+    () => { const I = pick([0.1,0.2,0.25,0.5]), R1 = pick([10,20,30,40]), R2 = pick([20,40,50,60]);
+      return { q:`In einer Reihenschaltung aus R₁ = ${R1} Ω und R₂ = ${R2} Ω fließt ein Strom von I = ${fmt(I)} A. Berechne die Teilspannungen U₁ und U₂ sowie die Gesamtspannung U.`,
+        a:`Die Stromstärke ist überall gleich: I = ${fmt(I)} A.<br>U₁ = R₁ · I = ${R1} Ω · ${fmt(I)} A = ${fmt(R1*I)} V<br>U₂ = R₂ · I = ${R2} Ω · ${fmt(I)} A = ${fmt(R2*I)} V<br>U = U₁ + U₂ = ${fmt((R1+R2)*I)} V` }; },
+    () => { const n = pick([10,20,23,46]);
+      return { q:`Eine Lichterkette besteht aus ${n} gleichen Lämpchen in Reihe und wird an 230 V betrieben. Welche Spannung liegt an einem Lämpchen? Was passiert, wenn ein Lämpchen durchbrennt?`,
+        a:`Die Spannung teilt sich gleichmäßig auf: 230 V : ${n} = ${fmt(230/n)} V pro Lämpchen.<br>Brennt ein Lämpchen durch, ist der einzige Stromweg unterbrochen – die ganze Kette geht aus.` }; }
+  ],
+  parallel: [
+    () => { const Uq = pick([6,12,24]); let R1 = pick([10,20,30,40,60]), R2 = pick([10,20,30,40,60]); if (R1===R2) R2 = R1===60 ? 30 : R1+10;
+      const I1 = Uq/R1, I2 = Uq/R2;
+      return { q:`Zwei Lampen mit R₁ = ${R1} Ω und R₂ = ${R2} Ω sind parallel an U = ${Uq} V angeschlossen. Berechne die Teilströme I₁ und I₂ und die Gesamtstromstärke I.`,
+        a:`An beiden Lampen liegt die volle Spannung ${Uq} V.<br>I₁ = U : R₁ = ${Uq} V : ${R1} Ω = ${fmt(I1)} A<br>I₂ = U : R₂ = ${Uq} V : ${R2} Ω = ${fmt(I2)} A<br>I = I₁ + I₂ = ${fmt(I1+I2)} A` }; },
+    () => { const I1 = pick([0.2,0.3,0.5,1]), I2 = pick([0.4,0.6,1.5,2]);
+      return { q:`In einer Parallelschaltung aus zwei Lampen misst man eine Gesamtstromstärke von I = ${fmt(I1+I2)} A. Durch Lampe L1 fließen I₁ = ${fmt(I1)} A. Wie groß ist der Strom durch L2?`,
+        a:`In der Parallelschaltung gilt I = I₁ + I₂.<br>I₂ = I − I₁ = ${fmt(I1+I2)} A − ${fmt(I1)} A = ${fmt(I2)} A` }; },
+    () => { const [R1,R2] = pick([[10,10],[20,30],[30,60],[10,40],[40,60],[20,20],[12,6]]); const Rg = R1*R2/(R1+R2);
+      return { q:`Zwei Widerstände R₁ = ${R1} Ω und R₂ = ${R2} Ω werden parallel geschaltet. Berechne den Gesamtwiderstand.`,
+        a:`1/R = 1/R₁ + 1/R₂ = 1/${R1} Ω + 1/${R2} Ω<br>R = ${fmt(Rg)} Ω<br>Der Gesamtwiderstand ist kleiner als der kleinste Einzelwiderstand.` }; },
+    () => { const u = pick([4.5,9,12,230]);
+      return { q:`Zwei Lampen sind parallel geschaltet. An Lampe L1 misst man ${fmt(u)} V. Welche Spannung liegt an L2 und an der Spannungsquelle? Was passiert mit L1, wenn L2 herausgedreht wird?`,
+        a:`In der Parallelschaltung ist die Spannung überall gleich: U = U₁ = U₂ = ${fmt(u)} V.<br>L1 leuchtet unverändert weiter, weil sie ihren eigenen Stromweg hat.` }; }
+  ],
+  combo: [
+    () => { const R1 = pick([10,20,30]); const [R2,R3] = pick([[20,20],[30,60],[10,40],[40,40],[20,30]]); const Rp = R2*R3/(R2+R3);
+      return { q:`Lampe L1 (R₁ = ${R1} Ω) ist in Reihe geschaltet mit einer Parallelschaltung aus L2 (R₂ = ${R2} Ω) und L3 (R₃ = ${R3} Ω). Berechne den Gesamtwiderstand.`,
+        a:`Schritt 1 (parallel): 1/R₂₃ = 1/${R2} Ω + 1/${R3} Ω → R₂₃ = ${fmt(Rp)} Ω<br>Schritt 2 (Reihe): R = R₁ + R₂₃ = ${R1} Ω + ${fmt(Rp)} Ω = ${fmt(R1+Rp)} Ω` }; },
+    () => { const R1 = pick([10,20,40]), Rb = pick([20,40,60]), I = pick([0.1,0.2,0.5]); const Rp = Rb/2, Uq = I*(R1+Rp);
+      return { q:`L1 (R₁ = ${R1} Ω) liegt in Reihe mit zwei gleichen, parallel geschalteten Lampen L2 und L3 (je ${Rb} Ω). Die Spannung beträgt U = ${fmt(Uq)} V. Berechne den Gesamtstrom I, die Spannung an L1 und den Strom durch L2.`,
+        a:`R₂₃ = ${Rb} Ω : 2 = ${fmt(Rp)} Ω; R = ${R1} Ω + ${fmt(Rp)} Ω = ${fmt(R1+Rp)} Ω<br>I = U : R = ${fmt(Uq)} V : ${fmt(R1+Rp)} Ω = ${fmt(I)} A<br>U₁ = R₁ · I = ${fmt(R1*I)} V<br>Der Strom teilt sich gleichmäßig auf: I₂ = ${fmt(I/2)} A` }; },
+    () => { const Uq = 12, U1 = pick([3,4,6,8]);
+      return { q:`In einer Schaltung liegt L1 in Reihe mit der Parallelschaltung aus L2 und L3. Die Quelle liefert ${Uq} V, an L1 misst man ${U1} V. Welche Spannungen liegen an L2 und L3?`,
+        a:`Die Spannung teilt sich auf L1 und den Parallelteil auf: U₂₃ = ${Uq} V − ${U1} V = ${Uq-U1} V.<br>Im Parallelteil ist die Spannung gleich: U₂ = U₃ = ${Uq-U1} V.` }; },
+    () => ({ q:`In der kombinierten Schaltung (L1 in Reihe mit L2 ∥ L3) wird Lampe L3 herausgedreht. Wie verändert sich die Helligkeit von L1 und L2? Begründe.`,
+        a:`Ohne L3 fehlt ein Stromweg, der Gesamtwiderstand wird größer und der Gesamtstrom kleiner.<br>→ L1 wird dunkler (weniger Strom).<br>→ An L1 fällt weniger Spannung ab, also bleibt mehr Spannung für L2: L2 wird heller.<br>Tipp: Probiere es in der Animation mit dem Kästchen aus!` })
+  ],
+  combo2: [
+    () => { const [R1,R2,R3] = pick([[10,20,30],[20,40,60],[10,10,20],[20,10,60],[30,30,30]]); const Rs = R1+R2, Rg = Rs*R3/(Rs+R3);
+      return { q:`L1 (R₁ = ${R1} Ω) und L2 (R₂ = ${R2} Ω) sind in Reihe geschaltet. Dieser Zweig liegt parallel zu L3 (R₃ = ${R3} Ω). Berechne den Gesamtwiderstand.`,
+        a:`Schritt 1 (Reihe): R₁₂ = ${R1} Ω + ${R2} Ω = ${Rs} Ω<br>Schritt 2 (parallel): 1/R = 1/${Rs} Ω + 1/${R3} Ω → R = ${fmt(Rg)} Ω` }; },
+    () => { const Uq = pick([6,12,24]), R1 = pick([10,20,30]), R2 = pick([10,20,30]), R3 = pick([20,30,60]); const I12 = Uq/(R1+R2), I3 = Uq/R3;
+      return { q:`An U = ${Uq} V liegen zwei parallele Zweige: Zweig 1 enthält L1 (${R1} Ω) und L2 (${R2} Ω) in Reihe, Zweig 2 enthält nur L3 (${R3} Ω). Berechne die Ströme in beiden Zweigen, den Gesamtstrom und die Spannungen an L1 und L2.`,
+        a:`Beide Zweige erhalten die volle Spannung ${Uq} V.<br>Zweig 1: I₁ = ${Uq} V : ${R1+R2} Ω = ${fmt(I12)} A<br>Zweig 2: I₃ = ${Uq} V : ${R3} Ω = ${fmt(I3)} A<br>I = I₁ + I₃ = ${fmt(I12+I3)} A<br>U₁ = ${R1} Ω · ${fmt(I12)} A = ${fmt(R1*I12)} V; U₂ = ${fmt(R2*I12)} V (Summe ${Uq} V)` }; },
+    () => { const U1 = pick([3,4,5,8]);
+      return { q:`Eine 12-V-Quelle versorgt zwei parallele Zweige: L1 und L2 in Reihe sowie L3 allein. An L1 misst man ${U1} V. Welche Spannungen liegen an L2 und an L3?`,
+        a:`Im Zweig mit L1 und L2 teilt sich die Spannung auf: U₂ = 12 V − ${U1} V = ${12-U1} V.<br>L3 liegt allein in einem parallelen Zweig: U₃ = 12 V.` }; },
+    () => ({ q:`L1 und L2 sind in Reihe geschaltet, dieser Zweig liegt parallel zu L3. Lampe L1 brennt durch. Was passiert mit L2, mit L3 und mit dem Gesamtstrom?`,
+        a:`L2 geht ebenfalls aus, weil sie mit L1 im selben Zweig in Reihe liegt.<br>L3 leuchtet unverändert hell weiter – sie hat ihren eigenen Zweig mit der vollen Spannung.<br>Der Gesamtstrom wird kleiner, weil ein Stromweg wegfällt.` })
+  ]
+};
+let taskIdx = 0;
+
+function showTask(){
+  const list = TASKS[mode]; const t = list[taskIdx % list.length]();
+  document.getElementById('taskTitle').textContent = MODES[mode].name + ' – Aufgaben';
+  document.getElementById('taskNo').textContent = 'Aufgabe ' + (taskIdx+1);
+  document.getElementById('taskText').innerHTML = t.q;
+  document.getElementById('solText').innerHTML = t.a;
+  hideSol();
+}
+
+const sol = document.getElementById('solution'), hold = document.getElementById('holdBtn');
+function showSol(){ sol.classList.remove('blur'); hold.classList.add('pressed'); }
+function hideSol(){ sol.classList.add('blur'); hold.classList.remove('pressed'); }
+hold.addEventListener('pointerdown', e => { e.preventDefault(); hold.setPointerCapture?.(e.pointerId); showSol(); });
+['pointerup','pointercancel','lostpointercapture','pointerleave'].forEach(ev => hold.addEventListener(ev, hideSol));
+hold.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); showSol(); } });
+hold.addEventListener('keyup', hideSol);
+hold.addEventListener('blur', hideSol);
+hold.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('blur', hideSol);
+
+/* ---------- Navigation ---------- */
+function setMode(m){
+  mode = m; U = 12; R = MODES[m].R.slice(); broken = false; taskIdx = 0;
+  const isCombo = m === 'combo' || m === 'combo2';
+  document.body.dataset.mode = isCombo ? 'combo' : m;
+  document.querySelectorAll('.modes button').forEach(b => b.classList.toggle('active', b.dataset.mode === (isCombo ? 'combo' : m)));
+  document.getElementById('variants').classList.toggle('hidden', !isCombo);
+  document.querySelectorAll('#variants button').forEach(b => b.classList.toggle('active', b.dataset.v === m));
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('tasks').classList.add('hidden');
+  document.getElementById('anim').classList.remove('hidden');
+  buildCircuit(); buildControls(); update();
+}
+document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+document.querySelectorAll('#variants button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.v)));
+document.getElementById('toTasks').addEventListener('click', () => {
+  document.getElementById('anim').classList.add('hidden');
+  document.getElementById('tasks').classList.remove('hidden');
+  showTask();
+});
+document.getElementById('nextTask').addEventListener('click', () => { taskIdx++; showTask(); });
+document.getElementById('backAnim').addEventListener('click', () => {
+  document.getElementById('tasks').classList.add('hidden');
+  document.getElementById('anim').classList.remove('hidden');
+});
+</script>
+</body>
+</html>
