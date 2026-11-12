@@ -95,6 +95,18 @@ button{font-family:inherit}
 .law{padding:14px 16px;border-radius:var(--r-md);background:color-mix(in srgb,var(--mode) 7%,var(--surface));font-size:.95rem;color:var(--muted);line-height:1.5}
 .law .f{display:block;margin-top:6px;color:var(--ink);font-weight:600;font-size:1.02rem;font-variant-numeric:tabular-nums;border-left:3px solid var(--mode);padding-left:10px}
 
+/* Erklärvideo */
+.video-wrap{margin-bottom:16px;background:var(--surface);border:2px solid color-mix(in srgb,var(--mode) 55%,var(--line));border-radius:var(--r-lg);padding:22px}
+.video-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.video-wrap h2{margin:0;font-size:1.15rem;font-weight:700;color:var(--mode)}
+.video-toggle{background:none;border:0;color:var(--mode);font-weight:600;font-size:.95rem;cursor:pointer;text-decoration:underline;padding:4px 0}
+.video-title{margin:6px 0 12px;color:var(--muted);font-size:.95rem}
+.video{position:relative;width:100%;max-width:760px;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vlink{display:inline-block;margin-top:10px;color:var(--mode);font-weight:600;font-size:.95rem}
+.vnote{margin:0 0 12px;padding:12px 14px;border-radius:var(--r-md);background:color-mix(in srgb,var(--lamp) 18%,var(--surface));border-left:4px solid var(--lamp);font-size:.93rem;line-height:1.5}
+.video-body.closed{display:none}
+
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:999px;border:0;font-size:1rem;font-weight:600;cursor:pointer;transition:transform .12s,background .2s}
 .btn:active{transform:scale(.98)}
@@ -168,6 +180,18 @@ body:not([data-mode]) .btn.primary{background:var(--hero)}
     <div class="variants hidden" id="variants">
       <button data-v="combo">Variante A: Parallelschaltung in einer Reihenschaltung</button>
       <button data-v="combo2">Variante B: Reihenschaltung in einer Parallelschaltung</button>
+    </div>
+    <div class="video-wrap" id="videoWrap">
+      <div class="video-head">
+        <h2>🎬 Erklärvideo</h2>
+        <button class="video-toggle" id="videoToggle" aria-expanded="true">Video ausblenden</button>
+      </div>
+      <div class="video-body" id="videoBody">
+        <p class="video-title" id="videoTitle"></p>
+        <p class="vnote hidden" id="videoNote"></p>
+        <div class="video"><iframe id="videoFrame" src="about:blank" title="Erklärvideo" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+        <a class="vlink" id="videoLink" href="#" target="_blank" rel="noopener">▶ Video direkt auf YouTube öffnen</a>
+      </div>
     </div>
     <div class="lab-grid">
       <div class="stage">
@@ -471,6 +495,33 @@ hold.addEventListener('blur', hideSol);
 hold.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('blur', hideSol);
 
+/* ---------- Erklärvideos ---------- */
+const VIDEOS = {
+  series:   { id: 'LTvsJ-r8qfk', title: 'Reihenschaltung – Aufbau & Erklärung | Lehrerschmidt' },
+  parallel: { id: 'W2qSxl00D4g', title: 'Parallelschaltung – Aufbau & Erklärung | Lehrerschmidt' },
+  combo:    { id: 'MRnepT9eQbY', title: 'Gemischte Schaltung berechnen | Lehrerschmidt',
+              note: '<b>Passt genau:</b> Das Video zeigt eine Parallelschaltung in einer Reihenschaltung – so wie Variante A.' },
+  combo2:   { id: 'MRnepT9eQbY', title: 'Gemischte Schaltung berechnen | Lehrerschmidt',
+              note: '<b>Achtung:</b> Das Video zeigt nur Variante A (Parallelschaltung in einer Reihenschaltung). Bei Variante B ist es umgekehrt: Hier ist eine <b>Reihenschaltung in einen Parallelzweig</b> eingebaut. Das Vorgehen ist aber dasselbe: Erst den inneren Teil zusammenfassen (hier die Reihe: R = R₁ + R₂), dann den äußeren Teil (hier parallel).' }
+};
+let videoId = null;
+function setVideo(m){
+  const v = VIDEOS[m];
+  if (v.id !== videoId){ document.getElementById('videoFrame').src = 'https://www.youtube-nocookie.com/embed/' + v.id; videoId = v.id; }
+  document.getElementById('videoFrame').title = v.title;
+  document.getElementById('videoTitle').textContent = v.title;
+  document.getElementById('videoLink').href = 'https://www.youtube.com/watch?v=' + v.id;
+  const note = document.getElementById('videoNote');
+  note.innerHTML = v.note || ''; note.classList.toggle('hidden', !v.note);
+}
+function stopVideo(){ document.getElementById('videoFrame').src = 'about:blank'; videoId = null; }
+document.getElementById('videoToggle').addEventListener('click', e => {
+  const body = document.getElementById('videoBody'); const closed = body.classList.toggle('closed');
+  e.target.textContent = closed ? 'Video einblenden' : 'Video ausblenden';
+  e.target.setAttribute('aria-expanded', String(!closed));
+  if (closed) stopVideo(); else setVideo(mode);
+});
+
 /* ---------- Navigation ---------- */
 function setMode(m){
   mode = m; U = 12; R = MODES[m].R.slice(); broken = false; taskIdx = 0;
@@ -483,18 +534,21 @@ function setMode(m){
   document.getElementById('tasks').classList.add('hidden');
   document.getElementById('anim').classList.remove('hidden');
   buildCircuit(); buildControls(); update();
+  if (!document.getElementById('videoBody').classList.contains('closed')) setVideo(m);
 }
 document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
 document.querySelectorAll('#variants button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.v)));
 document.getElementById('toTasks').addEventListener('click', () => {
   document.getElementById('anim').classList.add('hidden');
   document.getElementById('tasks').classList.remove('hidden');
+  stopVideo();
   showTask();
 });
 document.getElementById('nextTask').addEventListener('click', () => { taskIdx++; showTask(); });
 document.getElementById('backAnim').addEventListener('click', () => {
   document.getElementById('tasks').classList.add('hidden');
   document.getElementById('anim').classList.remove('hidden');
+  if (!document.getElementById('videoBody').classList.contains('closed')) setVideo(mode);
 });
 </script>
 </body>
